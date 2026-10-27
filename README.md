@@ -17,10 +17,16 @@ Une application web ultra rapide, sans fioritures ni usine à gaz, conçue spéc
 - 📈 **Indicateur de surcharge progressive immédiat** :
   - Badge vert lumineux automatique (`+2 kg 🔥` ou `+2 reps 🚀`) dès que tu bats ta séance précédente, ou indication de maintien. Évite l'effet "je stagne" d'un coup d'œil !
 - 📋 **Exercices par défaut intégrés** :
-  - **Échauffement intelligent** : Gainage (2 min - verrouillage du tronc), Banc à lombaires (3 × 15 reps - chaîne postérieure).
-  - **Tirage (Dos)** : Lat pulldown en pyramide (25 -> 30 -> 35 kg), Low rows (35 kg).
-  - **Poussées (Buste & Épaules)** : Chest Press (35 kg), Shoulder Press (10 -> 15 kg), Élévations latérales (4 kg).
-  - **Bras & Abdos (Isolation)** : Curl biceps (8 kg), Curl inversé (4 kg), Machine crunches (25 kg).
+  - **Échauffement** : Gainage (2 min), Banc à lombaires (3 × 15 reps).
+  - **Haut / Bras** :
+    - **Chest Press** (35 kg)
+    - **Shoulder Press** (2×10 reps @ 10 kg + 1×10 reps @ 15 kg)
+    - **Élévations latérales** (4 kg × 12 reps)
+    - **Machine à Lat (Lat Pulldown)** (Pyramide 15 reps : 25 kg / 30 kg / 35 kg)
+    - **Low rows** (35 kg × 10 reps)
+    - **Curl biceps** (8 kg × 10 reps)
+    - **Curl inversé** (4 kg × 12 reps)
+    - **Machine crunches** (25 kg × 15 reps)
   - Ajout d'exercices personnalisés à la volée.
 - ⏱️ **Chronomètre de repos intégré** : 60s, 90s, 120s avec alerte sonore (bip) quand c'est l'heure de repartir.
 - 📅 **Historique clair & Filtres** : Consulte tes séances passées ou isole un exercice pour voir ta courbe de progression dans le temps.
