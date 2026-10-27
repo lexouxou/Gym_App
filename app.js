@@ -4,49 +4,83 @@
  */
 
 // --- 1. DONNÉES PAR DÉFAUT (Cahier des charges utilisateur) ---
+// --- 1. DONNÉES PAR DÉFAUT (Cahier des charges mis à jour) ---
 const DEFAULT_EXERCISES = [
-  // Échauffement
+  // Échauffement intelligent (Tronc & Chaîne postérieure)
   {
     id: 'gainage',
     name: 'Gainage',
-    category: 'Échauffement',
+    category: 'Échauffement intelligent',
     unit: 'min',
     defaultWeight: 0,
     defaultReps: '2 min',
-    isDuration: true
+    isDuration: true,
+    note: 'Verrouillage du tronc'
   },
   {
     id: 'banc_lombaires',
     name: 'Banc à lombaires',
-    category: 'Échauffement',
+    category: 'Échauffement intelligent',
     unit: 'reps',
     defaultWeight: 0,
     defaultReps: '3 × 15 reps',
+    isDuration: false,
+    note: 'Chaîne postérieure'
+  },
+  // Tirage (Dos)
+  {
+    id: 'lat_pulldown',
+    name: 'Lat pulldown',
+    category: 'Tirage (Dos)',
+    unit: 'kg',
+    defaultWeight: 30,
+    defaultReps: 'Pyramide 25→30→35',
+    isDuration: false,
+    note: 'Pyramide (25 -> 30 -> 35 kg)'
+  },
+  {
+    id: 'low_rows',
+    name: 'Low rows',
+    category: 'Tirage (Dos)',
+    unit: 'kg',
+    defaultWeight: 35,
+    defaultReps: '10 reps',
     isDuration: false
   },
-  // Haut / Bras / Buste
+  // Poussées (Buste & Épaules)
   {
     id: 'chest_press',
     name: 'Chest Press',
-    category: 'Haut / Bras / Buste',
+    category: 'Poussées (Buste & Épaules)',
     unit: 'kg',
     defaultWeight: 35,
     defaultReps: '10 reps',
     isDuration: false
   },
   {
+    id: 'shoulder_press',
+    name: 'Shoulder Press',
+    category: 'Poussées (Buste & Épaules)',
+    unit: 'kg',
+    defaultWeight: 12.5,
+    defaultReps: '10 reps',
+    isDuration: false,
+    note: 'Objectif 10 -> 15 kg'
+  },
+  {
     id: 'elevations_laterales',
     name: 'Élévations latérales',
-    category: 'Haut / Bras / Buste',
+    category: 'Poussées (Buste & Épaules)',
     unit: 'kg',
     defaultWeight: 4,
     defaultReps: '12 reps',
     isDuration: false
   },
+  // Bras & Abdos (Isolation)
   {
     id: 'curl_biceps',
     name: 'Curl biceps',
-    category: 'Haut / Bras / Buste',
+    category: 'Bras & Abdos',
     unit: 'kg',
     defaultWeight: 8,
     defaultReps: '10 reps',
@@ -55,7 +89,7 @@ const DEFAULT_EXERCISES = [
   {
     id: 'curl_inverse',
     name: 'Curl inversé',
-    category: 'Haut / Bras / Buste',
+    category: 'Bras & Abdos',
     unit: 'kg',
     defaultWeight: 4,
     defaultReps: '12 reps',
@@ -64,30 +98,21 @@ const DEFAULT_EXERCISES = [
   {
     id: 'machine_crunches',
     name: 'Machine crunches',
-    category: 'Haut / Bras / Buste',
+    category: 'Bras & Abdos',
     unit: 'kg',
     defaultWeight: 25,
     defaultReps: '15 reps',
-    isDuration: false
-  },
-  {
-    id: 'low_rows',
-    name: 'Low rows',
-    category: 'Haut / Bras / Buste',
-    unit: 'kg',
-    defaultWeight: 35,
-    defaultReps: '10 reps',
     isDuration: false
   }
 ];
 
 // --- 2. ÉTAT GLOBAL DE L'APPLICATION ---
-const STORAGE_KEY_EXERCISES = 'irontrack_exercises_v1';
+const STORAGE_KEY_EXERCISES = 'irontrack_exercises_v2';
 const STORAGE_KEY_SESSIONS = 'irontrack_sessions_v1';
 
 let appState = {
   exercises: [],
-  sessions: [], // [{ id, date, dateFormatted, exercises: { [exId]: { weight, reps, sets, done } } }]
+  sessions: [], // [{ id, date, dateFormatted, records: { [exId]: { weight, reps, done } } }]
   currentDate: getTodayDateString(),
   activeTab: 'workout', // 'workout' | 'history' | 'settings'
 };
@@ -104,15 +129,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initStorage() {
-  const savedExercises = localStorage.getItem(STORAGE_KEY_EXERCISES);
-  if (savedExercises) {
+  const savedExercisesV2 = localStorage.getItem(STORAGE_KEY_EXERCISES);
+  if (savedExercisesV2) {
     try {
-      appState.exercises = JSON.parse(savedExercises);
+      appState.exercises = JSON.parse(savedExercisesV2);
     } catch (e) {
       appState.exercises = [...DEFAULT_EXERCISES];
     }
   } else {
-    appState.exercises = [...DEFAULT_EXERCISES];
+    // Migration depuis v1 si existant (conserve les éventuels exos personnalisés créés par l'utilisateur)
+    const oldExercisesStr = localStorage.getItem('irontrack_exercises_v1');
+    if (oldExercisesStr) {
+      try {
+        const oldExercises = JSON.parse(oldExercisesStr);
+        const customExos = oldExercises.filter(e => e.id && e.id.startsWith('custom_'));
+        appState.exercises = [...DEFAULT_EXERCISES, ...customExos];
+      } catch (e) {
+        appState.exercises = [...DEFAULT_EXERCISES];
+      }
+    } else {
+      appState.exercises = [...DEFAULT_EXERCISES];
+    }
     saveExercises();
   }
 
@@ -120,14 +157,31 @@ function initStorage() {
   if (savedSessions) {
     try {
       appState.sessions = JSON.parse(savedSessions);
+      // Complète les sessions existantes avec les nouveaux exercices si manquants
+      ensureNewExercisesInSessions();
     } catch (e) {
       appState.sessions = [];
     }
   } else {
-    // Si c'est la toute première ouverture, on crée une séance de départ "Semaine dernière"
-    // pour que l'utilisateur voie immédiatement la comparaison et l'effet de progression !
     seedInitialPastSession();
   }
+}
+
+function ensureNewExercisesInSessions() {
+  let changed = false;
+  appState.sessions.forEach(session => {
+    if (session.records) {
+      if (!session.records['lat_pulldown']) {
+        session.records['lat_pulldown'] = { weight: 25, reps: 'Pyramide 25→30', done: true };
+        changed = true;
+      }
+      if (!session.records['shoulder_press']) {
+        session.records['shoulder_press'] = { weight: 10, reps: '10 reps', done: true };
+        changed = true;
+      }
+    }
+  });
+  if (changed) saveSessions();
 }
 
 function seedInitialPastSession() {
@@ -142,12 +196,14 @@ function seedInitialPastSession() {
     records: {
       'gainage': { weight: 0, reps: '2 min', done: true },
       'banc_lombaires': { weight: 0, reps: '3 × 15 reps', done: true },
+      'lat_pulldown': { weight: 25, reps: 'Pyramide 25→30', done: true },
+      'low_rows': { weight: 30, reps: '10 reps', done: true },
       'chest_press': { weight: 32.5, reps: '10 reps', done: true },
+      'shoulder_press': { weight: 10, reps: '10 reps', done: true },
       'elevations_laterales': { weight: 4, reps: '12 reps', done: true },
       'curl_biceps': { weight: 8, reps: '10 reps', done: true },
       'curl_inverse': { weight: 4, reps: '10 reps', done: true },
       'machine_crunches': { weight: 20, reps: '15 reps', done: true },
-      'low_rows': { weight: 30, reps: '10 reps', done: true },
     }
   };
 
@@ -310,6 +366,7 @@ function renderWorkoutView() {
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-sm font-bold text-white tracking-tight">${ex.name}</h3>
               ${ex.isDuration ? '<span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-semibold">Chrono</span>' : ''}
+              ${ex.note ? `<span class="text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/20 px-1.5 py-0.5 rounded font-medium">${ex.note}</span>` : ''}
               <span id="badge_delta_${ex.id}"></span>
             </div>
             
